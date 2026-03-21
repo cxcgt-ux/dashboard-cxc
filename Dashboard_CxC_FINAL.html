@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard CxC — Grupo Calder Guatemala</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--blue:#1F4E79;--blue2:#2E75B6;--blue3:#D6E4F0;--red:#C00000;--red2:#FFE5E5;--green:#1a7a4a;--green2:#E6F4EC;--amber:#B45309;--amber2:#FEF3C7;--gray:#F8FAFC;--gray2:#E2E8F0;--gray3:#94A3B8;--gray4:#475569;--gray5:#1E293B;--shadow:0 2px 12px rgba(0,0,0,.08);--radius:12px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#EFF3F8;color:var(--gray5);min-height:100vh}
+.header{background:var(--blue);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.header h1{font-size:18px;font-weight:700}.header p{font-size:11px;opacity:.7;margin-top:2px}
+.bdate{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.filters{background:#fff;padding:10px 24px;border-bottom:1px solid var(--gray2);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.fl{font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px}
+.fg{display:flex;gap:5px;flex-wrap:wrap}
+.fb{padding:5px 12px;border-radius:20px;border:1.5px solid var(--gray2);background:#fff;font-size:11px;color:var(--gray4);cursor:pointer;font-family:inherit;font-weight:500}
+.fb:hover{border-color:var(--blue2);color:var(--blue)}
+.fb.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.fsep{width:1px;height:20px;background:var(--gray2)}
+.main{padding:16px 24px;display:flex;flex-direction:column;gap:14px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px}
+.kpi{background:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;cursor:default}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.kpi.cb::before{background:var(--blue)}.kpi.cr::before{background:var(--red)}.kpi.cg::before{background:var(--green)}.kpi.ca::before{background:var(--amber)}.kpi.cgr::before{background:var(--gray3)}
+.kl{font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kv{font-size:20px;font-weight:800;line-height:1.1;margin-bottom:3px}
+.kv.red{color:var(--red)}.kv.green{color:var(--green)}.kv.amber{color:var(--amber)}.kv.blue{color:var(--blue)}
+.ks{font-size:10px;color:var(--gray3)}
+.kb{display:inline-flex;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-top:4px}
+.kb.bad{background:var(--red2);color:var(--red)}.kb.warn{background:var(--amber2);color:var(--amber)}
+.pr3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pc{background:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);text-align:center;border-top:5px solid var(--blue)}
+.pc.danger{border-top-color:var(--red)}.pc.warn{border-top-color:var(--amber)}
+.pcn{font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.pcp{font-size:36px;font-weight:900;line-height:1;margin-bottom:2px}
+.pcp.danger{color:var(--red)}.pcp.warn{color:var(--amber)}
+.pcm{font-size:10px;color:var(--gray3);margin-bottom:8px}
+.pcbw{height:5px;background:var(--gray2);border-radius:3px;margin:0 0 10px;overflow:hidden}
+.pcb{height:100%;border-radius:3px;width:0%;transition:width .9s cubic-bezier(.25,.46,.45,.94)}
+.pcs{display:flex;justify-content:space-around;padding-top:10px;border-top:1px solid var(--gray2)}
+.pcsv{font-size:13px;font-weight:700;color:var(--gray5)}.pcsl{font-size:9px;color:var(--gray3);text-transform:uppercase}
+.card{background:#fff;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.ct{font-size:12px;font-weight:700;color:var(--gray5);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ctl{display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex-shrink:0}
+.dot.red{background:var(--red)}.dot.amber{background:var(--amber)}
+.cb2{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.cb2.red{background:var(--red2);color:var(--red)}.cb2.amber{background:var(--amber2);color:var(--amber)}.cb2.blue{background:var(--blue3);color:var(--blue)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g31{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.ch{position:relative}.ch240{height:240px}.ch260{height:260px}
+.pr{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.pl{font-size:11px;font-weight:700;color:var(--gray5);width:62px;flex-shrink:0;font-family:monospace}
+.pt{flex:1;background:var(--gray2);border-radius:4px;height:20px;overflow:hidden}
+.pf{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 7px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;width:0%;transition:width .7s cubic-bezier(.25,.46,.45,.94)}
+.pp{font-size:10px;color:var(--gray3);width:36px;text-align:right;flex-shrink:0}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead tr{background:var(--gray);border-bottom:2px solid var(--gray2)}
+th{padding:7px 9px;font-weight:700;color:var(--gray3);text-transform:uppercase;font-size:9px;letter-spacing:.4px;text-align:left;white-space:nowrap}
+th.r{text-align:right}td{padding:7px 9px;border-bottom:1px solid var(--gray2);color:var(--gray5)}
+td.r{text-align:right;font-variant-numeric:tabular-nums}td.bold{font-weight:700}td.mu{color:var(--gray3);font-size:10px}
+tbody tr:hover{background:var(--gray)}tbody tr.al{background:#FFF5F5}tbody tr.al td{color:var(--red)}
+.badge{display:inline-flex;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap}
+.badge.red{background:var(--red2);color:var(--red)}.badge.amber{background:var(--amber2);color:var(--amber)}.badge.green{background:var(--green2);color:var(--green)}.badge.blue{background:var(--blue3);color:var(--blue)}
+.sb{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.sb input{flex:1;padding:6px 11px;border:1.5px solid var(--gray2);border-radius:8px;font-size:11px;font-family:inherit;outline:none}
+.sb input:focus{border-color:var(--blue2)}
+.ib{background:var(--blue3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:10px;color:var(--blue);display:flex;gap:14px;flex-wrap:wrap}
+.ib strong{font-weight:700}
+.nd{text-align:center;color:var(--gray3);padding:20px;font-size:11px}
+.footer{text-align:center;font-size:10px;color:var(--gray3);padding:6px 0 14px}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.kpi{animation:fu .4s ease both}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}.kpi:nth-child(5){animation-delay:.25s}.kpi:nth-child(6){animation-delay:.3s}.kpi:nth-child(7){animation-delay:.35s}.kpi:nth-child(8){animation-delay:.4s}
+@media(max-width:900px){.g2,.g31,.pr3{grid-template-columns:1fr}.main,.header,.filters{padding-left:14px;padding-right:14px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><h1>Dashboard CxC &#8212; Grupo Calder Guatemala</h1><p>Cuentas por Cobrar &#183; An&#225;lisis completo de cartera y mora</p></div>
+  <div class="bdate" id="bd">19 Marzo 2026</div>
+</div>
+<div class="filters">
+  <span class="fl">Plantel</span>
+  <div class="fg">
+    <button class="fb active" data-f="plantel" data-v="todos"          onclick="sf('plantel','todos')">Todos</button>
+    <button class="fb"        data-f="plantel" data-v="Lactolac Vasto" onclick="sf('plantel','Lactolac Vasto')">Vasto</button>
+    <button class="fb"        data-f="plantel" data-v="Lactolac Mixco" onclick="sf('plantel','Lactolac Mixco')">Mixco</button>
+    <button class="fb"        data-f="plantel" data-v="Lactolac Xela"  onclick="sf('plantel','Lactolac Xela')">Xela</button>
+  </div>
+  <div class="fsep"></div>
+  <span class="fl">Regi&#243;n</span>
+  <div class="fg">
+    <button class="fb active" data-f="region" data-v="todos"         onclick="sf('region','todos')">Todas</button>
+    <button class="fb"        data-f="region" data-v="METROPOLITANA" onclick="sf('region','METROPOLITANA')">Metro</button>
+    <button class="fb"        data-f="region" data-v="CENTRAL"       onclick="sf('region','CENTRAL')">Central</button>
+    <button class="fb"        data-f="region" data-v="SURORIENTE"    onclick="sf('region','SURORIENTE')">Suroriente</button>
+    <button class="fb"        data-f="region" data-v="SUROCCIDENTE"  onclick="sf('region','SUROCCIDENTE')">Suroccidente</button>
+    <button class="fb"        data-f="region" data-v="NORORIENTE"    onclick="sf('region','NORORIENTE')">Nororiente</button>
+    <button class="fb"        data-f="region" data-v="NORTE"         onclick="sf('region','NORTE')">Norte</button>
+    <button class="fb"        data-f="region" data-v="PETEN"         onclick="sf('region','PETEN')">Pet&#233;n</button>
+  </div>
+</div>
+<div class="main">
+  <div class="kpi-row">
+    <div class="kpi cb"><div class="kl">Total Cartera</div><div class="kv blue" id="k0">&#8212;</div><div class="ks" id="k0s">&#8212; docs</div></div>
+    <div class="kpi cr"><div class="kl">% Mora Actual</div><div class="kv red" id="k1">&#8212;</div><div class="ks" id="k1s">vs meta 5.00%</div></div>
+    <div class="kpi cgr"><div class="kl">KPI Mora &#8212; Llevas</div><div class="kv red" id="k2">&#8212;</div><div class="kb bad" id="k2s">&#8212; pp sobre meta</div></div>
+    <div class="kpi cg"><div class="kl">No Vencido</div><div class="kv green" id="k3">&#8212;</div><div class="ks" id="k3s">&#8212;% cartera</div></div>
+    <div class="kpi cb"><div class="kl">Clientes</div><div class="kv blue" id="k4">&#8212;</div><div class="ks">activos en cartera</div></div>
+    <div class="kpi cr"><div class="kl">Bloqueados</div><div class="kv red" id="k5">&#8212;</div><div class="ks">con bloqueo de pedido</div></div>
+    <div class="kpi ca"><div class="kl">Mora &gt;60 d&#237;as</div><div class="kv amber" id="k6">&#8212;</div><div class="ks">riesgo alto</div></div>
+    <div class="kpi ca"><div class="kl">Contados Vencidos</div><div class="kv amber" id="k7">&#8212;</div><div class="ks" id="k7s">&#8212; clientes</div></div>
+  </div>
+
+  <div style="font-size:10px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px">Mora por plantel vs meta 5%<div style="flex:1;height:1px;background:var(--gray2)"></div></div>
+  <div class="pr3">
+    <div class="pc danger">
+      <div class="pcn">Lactolac Vasto</div><div class="pcp danger" id="pv0">17.8%</div>
+      <div class="pcm">Meta 5% &nbsp;&#183;&nbsp; <span style="color:var(--red);font-weight:700" id="pv0d">+12.8 pp</span></div>
+      <div class="pcbw"><div class="pcb" id="pv0b" style="background:var(--red)" data-w="89"></div></div>
+      <div class="pcs"><div><div class="pcsv" id="pv0v">Q 3.1M</div><div class="pcsl">Vencido</div></div><div><div class="pcsv" id="pv0c">Q 17.5M</div><div class="pcsl">Cartera</div></div><div><div class="pcsv" id="pv0n">377</div><div class="pcsl">Clientes</div></div></div>
+    </div>
+    <div class="pc warn">
+      <div class="pcn">Lactolac Mixco</div><div class="pcp warn" id="pm0">7.5%</div>
+      <div class="pcm">Meta 5% &nbsp;&#183;&nbsp; <span style="color:var(--amber);font-weight:700" id="pm0d">+2.5 pp</span></div>
+      <div class="pcbw"><div class="pcb" id="pm0b" style="background:var(--amber)" data-w="50"></div></div>
+      <div class="pcs"><div><div class="pcsv" id="pm0v">Q 946K</div><div class="pcsl">Vencido</div></div><div><div class="pcsv" id="pm0c">Q 12.7M</div><div class="pcsl">Cartera</div></div><div><div class="pcsv" id="pm0n">391</div><div class="pcsl">Clientes</div></div></div>
+    </div>
+    <div class="pc danger">
+      <div class="pcn">Lactolac Xela</div><div class="pcp danger" id="px0">32.6%</div>
+      <div class="pcm">Meta 5% &nbsp;&#183;&nbsp; <span style="color:var(--red);font-weight:700" id="px0d">+27.6 pp</span></div>
+      <div class="pcbw"><div class="pcb" id="px0b" style="background:var(--red)" data-w="100"></div></div>
+      <div class="pcs"><div><div class="pcsv" id="px0v">Q 134K</div><div class="pcsl">Vencido</div></div><div><div class="pcsv" id="px0c">Q 410K</div><div class="pcsl">Cartera</div></div><div><div class="pcsv" id="px0n">99</div><div class="pcsl">Clientes</div></div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot"></span>Antig&#252;edad de Saldos</div></div><div class="ch ch240"><canvas id="c-ant"></canvas></div></div>
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot"></span>Monto Vencido por Regi&#243;n</div></div><div class="ch ch240"><canvas id="c-reg"></canvas></div></div>
+  </div>
+
+  <div class="g31">
+    <div class="card">
+      <div class="ct"><div class="ctl"><span class="dot"></span>An&#225;lisis 80/20 &#8212; Mora por Ruta</div><span class="cb2 red">5 rutas = 80%</span></div>
+      <div class="ib"><span>Solo <strong>5 rutas</strong> concentran el <strong>80%</strong> del vencido</span><span>47 rutas activas</span></div>
+      <div id="pb"></div>
+    </div>
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot"></span>Vencido por Plazo</div></div><div class="ch ch240"><canvas id="c-plz"></canvas></div></div>
+  </div>
+
+  <div class="card"><div class="ct"><div class="ctl"><span class="dot"></span>Top 15 Rutas &#8212; Vencido vs Cartera</div></div><div class="ch ch260"><canvas id="c-rut"></canvas></div></div>
+
+  <div class="g2">
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot red"></span>Top 10 Clientes por Monto Vencido</div></div>
+      <div class="tw"><table><thead><tr><th>#</th><th>Cliente</th><th>Plantel</th><th class="r">D&#237;as</th><th class="r">Vencido</th><th class="r">% Mora</th></tr></thead><tbody id="tb-top"></tbody></table></div>
+    </div>
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot amber"></span>Sin Bloqueo &#8212; Mora &gt;120 d&#237;as</div><span class="cb2 red">Urgente</span></div>
+      <div class="tw"><table><thead><tr><th>Cliente</th><th>Plantel</th><th class="r">D&#237;as</th><th class="r">Vencido</th></tr></thead><tbody id="tb-alt"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct"><div class="ctl"><span class="dot amber"></span>Contados Pendientes Vencidos (Plazo = 0)</div><span class="cb2 amber">258 clientes &#183; Q 1,173,319</span></div>
+    <div class="sb"><input type="text" id="si-cnt" placeholder="Buscar cliente..." oninput="rCnt()"><span style="font-size:10px;color:var(--gray3)" id="cnt-n"></span></div>
+    <div class="tw"><table><thead><tr><th>#</th><th>Cliente</th><th>Plantel</th><th>Regi&#243;n</th><th class="r">D&#237;as</th><th class="r">Monto Vencido</th><th class="r">Docs</th></tr></thead><tbody id="tb-cnt"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="ct"><div class="ctl"><span class="dot red"></span>Clientes con Bloqueo de Pedido</div><span class="cb2 red">95 bloqueados</span></div>
+    <div class="sb"><input type="text" id="si-blq" placeholder="Buscar cliente..." oninput="rBlq()"><span style="font-size:10px;color:var(--gray3)" id="blq-n"></span></div>
+    <div class="tw"><table><thead><tr><th>Cliente</th><th>Plantel</th><th>Regi&#243;n</th><th>Ruta</th><th class="r">D&#237;as</th><th class="r">Vencido</th><th class="r">Docs</th><th>Acci&#243;n</th></tr></thead><tbody id="tb-blq"></tbody></table></div>
+  </div>
+
+  <div class="g2">
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot"></span>Resumen por Plantel</div></div>
+      <div class="tw"><table><thead><tr><th>Plantel</th><th class="r">Cartera</th><th class="r">Vencido</th><th class="r">% Mora</th><th class="r">Clientes</th></tr></thead>
+      <tbody>
+        <tr><td class="bold">Lactolac Vasto</td><td class="r">Q 17,466,172</td><td class="r" style="color:var(--red)">Q 3,103,048</td><td class="r"><span class="badge red">17.8%</span></td><td class="r">377</td></tr>
+        <tr><td class="bold">Lactolac Mixco</td><td class="r">Q 12,653,266</td><td class="r" style="color:var(--amber)">Q 946,716</td><td class="r"><span class="badge amber">7.5%</span></td><td class="r">391</td></tr>
+        <tr><td class="bold">Lactolac Xela</td><td class="r">Q 409,856</td><td class="r" style="color:var(--red)">Q 133,616</td><td class="r"><span class="badge red">32.6%</span></td><td class="r">99</td></tr>
+        <tr style="background:var(--gray);font-weight:700"><td>TOTAL</td><td class="r">Q 30,444,765</td><td class="r" style="color:var(--red)">Q 4,098,850</td><td class="r"><span class="badge red">13.5%</span></td><td class="r">858</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card"><div class="ct"><div class="ctl"><span class="dot"></span>Resumen por Regi&#243;n</div></div>
+      <div class="tw"><table><thead><tr><th>Regi&#243;n</th><th class="r">Vencido</th><th class="r">%</th><th class="r">Clientes</th></tr></thead>
+      <tbody>
+        <tr><td class="bold">METROPOLITANA</td><td class="r" style="color:var(--red)">Q 3,190,614</td><td class="r"><span class="badge blue">77.8%</span></td><td class="r">501</td></tr>
+        <tr><td class="bold">SURORIENTE</td><td class="r">Q 272,517</td><td class="r"><span class="badge blue">6.6%</span></td><td class="r">45</td></tr>
+        <tr><td class="bold">CENTRAL</td><td class="r">Q 258,854</td><td class="r"><span class="badge blue">6.3%</span></td><td class="r">87</td></tr>
+        <tr><td class="bold">SUROCCIDENTE</td><td class="r">Q 182,797</td><td class="r"><span class="badge blue">4.5%</span></td><td class="r">75</td></tr>
+        <tr><td class="bold">NORORIENTE</td><td class="r">Q 91,980</td><td class="r"><span class="badge blue">2.2%</span></td><td class="r">69</td></tr>
+        <tr><td class="bold">NOROCCIDENTE</td><td class="r">Q 48,570</td><td class="r"><span class="badge blue">1.2%</span></td><td class="r">26</td></tr>
+        <tr><td class="bold">NORTE</td><td class="r">Q 46,154</td><td class="r"><span class="badge blue">1.1%</span></td><td class="r">49</td></tr>
+        <tr><td class="bold">PETEN</td><td class="r">Q 7,364</td><td class="r"><span class="badge blue">0.2%</span></td><td class="r">6</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+  <div class="footer">Dashboard CxC &#183; Grupo Calder Guatemala &#183; 19 Marzo 2026</div>
+</div>
+<script>
+var CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRx3_ZBrdMa5bmt91SDTy_jD2s3XqsNYcBsB6o4a-p1BXSI71zjqt5wZ_x_Wx76LqAoILDiAsR3k3sP/pub?gid=280965409&single=true&output=csv';
+var KPI={"todos|todos":{"cartera":30444765,"vencido":4098850,"noVencido":26345914,"pctMora":13.46,"clientes":858,"bloqueados":95,"mora60":965609,"docs":4149,"contados":1173319,"cCli":258},"Lactolac Mixco|todos":{"cartera":12653266,"vencido":946716,"noVencido":11706550,"pctMora":7.48,"clientes":391,"bloqueados":36,"mora60":145665,"docs":1795,"contados":193583,"cCli":64},"Lactolac Vasto|todos":{"cartera":17466172,"vencido":3103048,"noVencido":14363124,"pctMora":17.77,"clientes":377,"bloqueados":59,"mora60":779432,"docs":2082,"contados":934575,"cCli":165},"Lactolac Xela|todos":{"cartera":409856,"vencido":133616,"noVencido":276240,"pctMora":32.6,"clientes":99,"bloqueados":0,"mora60":39690,"docs":246,"contados":39998,"cCli":29},"todos|METROPOLITANA":{"cartera":28443697,"vencido":3190614,"noVencido":25253083,"pctMora":11.22,"clientes":501,"bloqueados":50,"mora60":744171,"docs":3372,"contados":850000,"cCli":180},"todos|CENTRAL":{"cartera":764328,"vencido":258854,"noVencido":505474,"pctMora":33.87,"clientes":87,"bloqueados":17,"mora60":141825,"docs":197,"contados":95000,"cCli":35},"todos|SURORIENTE":{"cartera":526314,"vencido":272517,"noVencido":253797,"pctMora":51.78,"clientes":45,"bloqueados":13,"mora60":64970,"docs":164,"contados":120000,"cCli":28},"todos|SUROCCIDENTE":{"cartera":436100,"vencido":182797,"noVencido":253302,"pctMora":41.92,"clientes":75,"bloqueados":0,"mora60":14560,"docs":207,"contados":65000,"cCli":22},"todos|NORORIENTE":{"cartera":135390,"vencido":91980,"noVencido":43410,"pctMora":67.94,"clientes":69,"bloqueados":14,"mora60":82,"docs":93,"contados":30000,"cCli":12},"todos|NORTE":{"cartera":50572,"vencido":46154,"noVencido":4418,"pctMora":91.26,"clientes":49,"bloqueados":1,"mora60":0,"docs":64,"contados":5000,"cCli":4},"todos|PETEN":{"cartera":7364,"vencido":7364,"noVencido":0,"pctMora":100,"clientes":6,"bloqueados":0,"mora60":0,"docs":7,"contados":319,"cCli":2},"todos|NOROCCIDENTE":{"cartera":81000,"vencido":48570,"noVencido":32430,"pctMora":59.96,"clientes":26,"bloqueados":0,"mora60":0,"docs":45,"contados":8000,"cCli":5},"Lactolac Vasto|METROPOLITANA":{"cartera":15836702,"vencido":2304441,"noVencido":13532262,"pctMora":14.55,"clientes":130,"bloqueados":14,"mora60":565382,"docs":1535,"contados":680000,"cCli":100},"Lactolac Vasto|CENTRAL":{"cartera":726998,"vencido":257078,"noVencido":469920,"pctMora":35.36,"clientes":85,"bloqueados":17,"mora60":141825,"docs":177,"contados":85000,"cCli":30},"Lactolac Vasto|SURORIENTE":{"cartera":526314,"vencido":272517,"noVencido":253797,"pctMora":51.78,"clientes":45,"bloqueados":13,"mora60":64970,"docs":164,"contados":110000,"cCli":25},"Lactolac Mixco|METROPOLITANA":{"cartera":12590787,"vencido":926149,"noVencido":11664638,"pctMora":7.36,"clientes":369,"bloqueados":36,"mora60":144345,"docs":1740,"contados":185000,"cCli":62}};
+var ANT={"todos|todos":[3306433,63012,75481,0,845617],"Lactolac Mixco|todos":[934129,1026,22442,0,110040],"Lactolac Vasto|todos":[2333096,53026,51862,0,701954],"Lactolac Xela|todos":[86643,8974,1177,0,33622],"todos|METROPOLITANA":[2648377,12850,24833,0,695410],"todos|CENTRAL":[118078,380,22294,0,119531],"todos|SURORIENTE":[237840,0,22343,0,28007],"todos|SUROCCIDENTE":[117679,52250,6010,0,2669],"todos|NORORIENTE":[91897,0,0,0,0],"todos|NOROCCIDENTE":[39044,9802,0,0,0],"todos|NORTE":[46154,0,0,0,0],"todos|PETEN":[7364,0,0,0,0],"Lactolac Vasto|METROPOLITANA":[1771654,10457,2638,0,551747],"Lactolac Vasto|CENTRAL":[116302,380,22294,0,119531],"Lactolac Vasto|SURORIENTE":[237840,0,22343,0,28007],"Lactolac Mixco|METROPOLITANA":[913226,2407,22194,0,110040]};
+var BLOQ=[{n:"LESLY MARILYN GARCIA MONTERROSO",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:27,v:74171,dc:13},{n:"ALIMENTOS CORPORATIVOS CORALSA, S.A",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:1,v:70578,dc:35},{n:"CANTATA, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:5,v:22500,dc:4},{n:"EDGAR AMERICO BAC SALAZAR",p:"Lactolac Vasto",r:"METROPOLITANA",ru:"DGV007",d:28,v:21580,dc:8},{n:"AXEL EDILZAR GONZALEZ GONZALEZ",p:"Lactolac Vasto",r:"SURORIENTE",ru:"DGV007",d:11,v:18967,dc:10},{n:"SOLIDA EXPANSION, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:63,v:16800,dc:3},{n:"VENTAS A CLIENTES VARIOS EN OFICINA",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:199,v:12369,dc:13},{n:"PALACE, SOCIEDAD ANONIMA",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:15,v:12059,dc:9},{n:"EDWIN AMBROSIO",p:"Lactolac Vasto",r:"SURORIENTE",ru:"DGV007",d:11,v:11326,dc:6},{n:"GRUPO TONYS GRILL, S.A.",p:"Lactolac Vasto",r:"NORORIENTE",ru:"DGV007",d:11,v:10964,dc:2},{n:"MARIA DE LOS ANGELES ESCOBAR AJIN",p:"Lactolac Vasto",r:"CENTRAL",ru:"DGV004",d:13,v:10620,dc:4},{n:"WALTERS PIZZAS, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:27,v:10500,dc:1},{n:"INVERSIONES MOKA, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:218,v:10500,dc:4},{n:"OTTO RENE ORTIZ MARROQUIN",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:59,v:10000,dc:1},{n:"SABBORES, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",ru:"DGM012",d:46,v:8498,dc:7}];
+var TOP=[{n:"OPERADORA DE TIENDAS, S.A.",p:"Lactolac Vasto",r:"METROPOLITANA",v:1874041,d:171,pct:18},{n:"MEGARED DE SUPERMERCADOS, S.A.",p:"Lactolac Vasto",r:"METROPOLITANA",v:296384,d:169,pct:24},{n:"LA BODEGONA DE ANTIGUA S.A.",p:"Lactolac Vasto",r:"CENTRAL",v:203277,d:212,pct:40},{n:"SERVICIOS DE GERENCIA, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:188700,d:180,pct:14},{n:"INVERSIONES TONANTEL, S.A.",p:"Lactolac Vasto",r:"SURORIENTE",v:151205,d:232,pct:44},{n:"SIST. ESP. DIST. HORIZ. S.A.",p:"Lactolac Vasto",r:"SUROCCIDENTE",v:113973,d:42,pct:70},{n:"ALIMENTOS CORP. CORALSA, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:98364,d:268,pct:17},{n:"LESLY MARILYN GARCIA M.",p:"Lactolac Mixco",r:"METROPOLITANA",v:74171,d:27,pct:100},{n:"MEGARED SUPERMERCADOS (Mixco)",p:"Lactolac Mixco",r:"METROPOLITANA",v:72387,d:169,pct:21},{n:"RECURSOS SELECTIVOS S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:66132,d:6,pct:21}];
+var ALT=[{n:"ALIMENTOS CORPORATIVOS CORALSA",p:"Lactolac Mixco",r:"METROPOLITANA",v:98364,d:268},{n:"BARCELO GESTION HOTELERA, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:19181,d:252},{n:"DISTRIBUIDORA EL MONJEÑO, S.A.",p:"Lactolac Vasto",r:"SUROCCIDENTE",v:2094,d:248},{n:"BANQUETES DE GUATEMALA S.A.",p:"Lactolac Xela",r:"SUROCCIDENTE",v:68037,d:236},{n:"INVERSIONES TONANTEL, S.A.",p:"Lactolac Vasto",r:"SURORIENTE",v:151205,d:232},{n:"LA BODEGONA DE ANTIGUA S.A.",p:"Lactolac Vasto",r:"CENTRAL",v:203277,d:212},{n:"SERVICIOS DE GERENCIA, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:188700,d:180},{n:"OPERADORA DE TIENDAS, S.A.",p:"Lactolac Vasto",r:"METROPOLITANA",v:1874041,d:171}];
+var CNT=[{n:"OPERADORA DE TIENDAS, S.A.",p:"Lactolac Vasto",r:"METROPOLITANA",v:656549,d:171,dc:45},{n:"SISTEMAS NUTRICIONALES SOC. ANON.",p:"Lactolac Mixco",r:"METROPOLITANA",v:34094,d:28,dc:8},{n:"COOPERATIVA DE AHORRO, CREDITO Y",p:"Lactolac Vasto",r:"CENTRAL",v:24484,d:52,dc:6},{n:"MARIO BAC TEPEU",p:"Lactolac Mixco",r:"METROPOLITANA",v:21600,d:15,dc:3},{n:"AXEL EDILZAR GONZALEZ GONZALEZ",p:"Lactolac Vasto",r:"SURORIENTE",v:18967,d:11,dc:10},{n:"ARACELY MARROQUIN RUANO DE REYES",p:"Lactolac Vasto",r:"METROPOLITANA",v:12500,d:4,dc:2},{n:"DERY SEIJAS",p:"Lactolac Mixco",r:"METROPOLITANA",v:11800,d:11,dc:3},{n:"EDWIN AMBROSIO",p:"Lactolac Vasto",r:"SURORIENTE",v:11326,d:11,dc:6},{n:"CAPPU, SOCIEDAD ANONIMA",p:"Lactolac Vasto",r:"METROPOLITANA",v:11275,d:4,dc:2},{n:"GRUPO TONYS GRILL, SOC. ANONIMA",p:"Lactolac Vasto",r:"NORORIENTE",v:10964,d:11,dc:2},{n:"WALTERS PIZZAS, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:10500,d:27,dc:1},{n:"VENTAS A CLIENTES VARIOS EN OFICINA",p:"Lactolac Mixco",r:"METROPOLITANA",v:10156,d:30,dc:13},{n:"JORGE MARIO MARROQUIN GREGORIO",p:"Lactolac Mixco",r:"METROPOLITANA",v:10000,d:3,dc:1},{n:"OTTO RENE ORTIZ MARROQUIN",p:"Lactolac Mixco",r:"METROPOLITANA",v:10000,d:59,dc:1},{n:"DISTRIBUIDORA ANGELS, S.A.",p:"Lactolac Mixco",r:"METROPOLITANA",v:9600,d:3,dc:2}];
+var fP='todos',fR='todos';
+var BL=['#1F4E79','#2E75B6','#4A90D9','#6AA8E8','#8EC0F0','#B5D4F4','#D6E4F0','#EBF3FA'];
+var TT={backgroundColor:'#1E293B',titleColor:'#94A3B8',bodyColor:'#F0F4FF',borderColor:'#334155',borderWidth:1,padding:10,cornerRadius:8,displayColors:false};
+function fmt(v){return 'Q '+Math.round(Math.max(v,0)).toLocaleString('en-US');}
+function fS(v){return v>=1e6?'Q '+(v/1e6).toFixed(1)+'M':v>=1000?'Q '+(v/1000).toFixed(0)+'K':'Q '+Math.round(Math.max(v,0));}
+function gk(){
+  // Solo retorna datos si existe la combinación exacta
+  // Si el plantel no opera en esa región → retorna vacío (no fallback)
+  if(fP==='todos'&&fR==='todos') return KPI['todos|todos']||{};
+  if(fP==='todos') return KPI['todos|'+fR]||{};
+  if(fR==='todos') return KPI[fP+'|todos']||{};
+  return KPI[fP+'|'+fR]||{}; // combinación exacta, si no existe → vacío
+}
+function ga(){
+  if(fP==='todos'&&fR==='todos') return (ANT['todos|todos']||[0,0,0,0,0]).map(function(v){return Math.max(v,0);});
+  if(fP==='todos') return (ANT['todos|'+fR]||[0,0,0,0,0]).map(function(v){return Math.max(v,0);});
+  if(fR==='todos') return (ANT[fP+'|todos']||[0,0,0,0,0]).map(function(v){return Math.max(v,0);});
+  return (ANT[fP+'|'+fR]||[0,0,0,0,0]).map(function(v){return Math.max(v,0);});
+}
+function ac(el,t,q,dr){
+  if(!el)return;q=q!==false;dr=dr||900;
+  var s=performance.now(),pv=el._t||0;el._t=t;
+  (function tk(n){if(el._t!==t)return;var p=Math.min((n-s)/dr,1),e=1-Math.pow(1-p,3);
+  el.textContent=q?fmt(Math.round(pv+(t-pv)*e)):(Math.round(pv+(t-pv)*e)).toLocaleString();
+  if(p<1)requestAnimationFrame(tk);})(s);
+}
+function acPct(el,t,dr){
+  // Animar porcentaje (sin Q)
+  if(!el)return;dr=dr||900;
+  var s=performance.now(),pv=el._t2||0;el._t2=t;
+  (function tk(n){if(el._t2!==t)return;var p=Math.min((n-s)/dr,1),e=1-Math.pow(1-p,3);
+  var cur=pv+(t-pv)*e;
+  el.textContent=cur.toFixed(2)+'%';
+  if(p<1)requestAnimationFrame(tk);})(s);
+}
+function uKPI(){
+  var k=gk();
+  ac(document.getElementById('k0'),k.cartera||0);
+  ac(document.getElementById('k1'),k.vencido||0);
+  ac(document.getElementById('k3'),k.noVencido||0);
+  ac(document.getElementById('k6'),k.mora60||0);
+  ac(document.getElementById('k7'),k.contados||0);
+  ac(document.getElementById('k4'),k.clientes||0,false,700);
+  ac(document.getElementById('k5'),k.bloqueados||0,false,700);
+  document.getElementById('k0s').textContent=(k.docs||0).toLocaleString()+' documentos';
+  // Tarjeta mora: muestra el % actual como valor principal
+  var pct=k.pctMora||0;
+  acPct(document.getElementById('k1'),pct);
+  document.getElementById('k1s').textContent='vs meta 5.00%';
+  // Tarjeta meta: muestra cuánto llevas (pp sobre meta)
+  var diff=(pct-5);
+  var k2el=document.getElementById('k2');
+  if(k2el) acPct(k2el,pct);
+  document.getElementById('k2s').textContent=(diff>0?'+':'')+diff.toFixed(2)+' pp sobre meta';
+  document.getElementById('k3s').textContent=(100-pct).toFixed(2)+'% de la cartera';
+  document.getElementById('k7s').textContent=(k.cCli||0)+' clientes';
+}
+function uPL(){
+  var cfg=[{p:'Lactolac Vasto',ids:['pv0','pv0d','pv0b','pv0v','pv0c','pv0n']},{p:'Lactolac Mixco',ids:['pm0','pm0d','pm0b','pm0v','pm0c','pm0n']},{p:'Lactolac Xela',ids:['px0','px0d','px0b','px0v','px0c','px0n']}];
+  cfg.forEach(function(c){
+    var k=KPI[c.p+'|'+fR]||KPI[c.p+'|todos']||{};
+    var pct=k.pctMora||0,diff=(pct-5);
+    var col=pct>20?'var(--red)':pct>10?'var(--amber)':'var(--green)';
+    var ids=c.ids;
+    var e0=document.getElementById(ids[0]);if(e0)e0.textContent=pct.toFixed(1)+'%';
+    var e1=document.getElementById(ids[1]);if(e1){e1.textContent=(diff>0?'+':'')+diff.toFixed(1)+' pp';e1.style.color=col;}
+    var e2=document.getElementById(ids[2]);if(e2){e2.style.background=col;e2.style.width=Math.min(pct*3,100)+'%';}
+    var e3=document.getElementById(ids[3]);if(e3)e3.textContent=fS(k.vencido||0);
+    var e4=document.getElementById(ids[4]);if(e4)e4.textContent=fS(k.cartera||0);
+    var e5=document.getElementById(ids[5]);if(e5)e5.textContent=(k.clientes||0);
+  });
+}
+var CH={};
+function ups(id,el,cfg){if(!el)return;if(CH[id]){cfg.data.datasets.forEach(function(ds,i){if(CH[id].data.datasets[i])CH[id].data.datasets[i].data=ds.data;});CH[id].update();}else{CH[id]=new Chart(el,cfg);}}
+function bAnt(){ups('ant',document.getElementById('c-ant'),{type:'bar',data:{labels:['1-30d','31-60d','61-90d','91-120d','+120d'],datasets:[{label:'Vencido',data:ga(),backgroundColor:['#1F4E79','#E59400','#E53935','#A32D2D','#C00000'],borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:function(c){return fmt(c.raw);}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return fS(v);}},grid:{color:'#F1F5F9'}},x:{grid:{display:false}}}}});}
+function bReg(){var rgs=['METROPOLITANA','SURORIENTE','CENTRAL','SUROCCIDENTE','NORORIENTE','NOROCCIDENTE','NORTE','PETEN'];ups('reg',document.getElementById('c-reg'),{type:'bar',data:{labels:rgs,datasets:[{label:'Vencido',data:rgs.map(function(r){return (KPI[fP+'|'+r]||KPI['todos|'+r]||{}).vencido||0;}),backgroundColor:BL,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:function(c){return fmt(c.raw);}}}},spaces:{x:{beginAtZero:true,ticks:{callback:function(v){return fS(v);}},grid:{color:'#F1F5F9'}},y:{grid:{display:false},ticks:{font:{size:10}}}},scales:{x:{beginAtZero:true,ticks:{callback:function(v){return fS(v);}},grid:{color:'#F1F5F9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});}
+function bRut(){ups('rut',document.getElementById('c-rut'),{type:'bar',data:{labels:['SGV001','IGM002','IGM001','SGV003','SGV002','DGV007','DGV004','DGM012','DGV012','DGV001','DGV008','DGX004','SGV004','SGM002','DGM003'],datasets:[{label:'Vencido',data:[1874064,420037,377496,244786,197579,186428,178626,128409,113973,99442,55760,54619,49450,35240,32228],backgroundColor:'#C00000',borderRadius:4},{label:'No Vencido',data:[8699755,3135365,701484,1692629,2228951,62466,252394,148785,49137,110324,24509,131472,859089,1049442,5711],backgroundColor:'#1F4E79',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{...TT,callbacks:{label:function(c){return c.dataset.label+': '+fmt(c.raw);}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9}}},y:{stacked:true,ticks:{callback:function(v){return fS(v);}},grid:{color:'#F1F5F9'}}}}});}
+function bPlz(){ups('plz',document.getElementById('c-plz'),{type:'doughnut',data:{labels:['15d','30d','90d','Contado','45d','60d','8d','21d'],datasets:[{data:[890136,801017,702190,697570,387573,329220,191050,95615],backgroundColor:BL,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:6}},tooltip:{...TT,callbacks:{label:function(c){return c.label+': '+fmt(c.raw);}}}}}});}
+function bPar(){var rw=[{r:'SGV001',v:1874064,a:45.7},{r:'IGM002',v:420037,a:55.9},{r:'IGM001',v:377496,a:65.1},{r:'SGV003',v:244786,a:71.1},{r:'SGV002',v:197579,a:75.9},{r:'DGV007',v:186428,a:80.4}];var mx=rw[0].v;var cl=['#C00000','#E53935','#E59400','#E59400','#2E75B6','#2E75B6'];document.getElementById('pb').innerHTML=rw.map(function(r,i){return '<div class="pr"><span class="pl">'+r.r+'</span><div class="pt"><div class="pf" style="width:0%;background:'+cl[i]+'" data-w="'+(r.v/mx*100).toFixed(0)+'">'+fS(r.v)+'</div></div><span class="pp">\u2264'+r.a.toFixed(0)+'%</span></div>';}).join('');requestAnimationFrame(function(){requestAnimationFrame(function(){document.querySelectorAll('.pf').forEach(function(e){e.style.width=e.dataset.w+'%';});});});}
+function bTop(){var tb=document.getElementById('tb-top');if(!tb)return;var rw=TOP.filter(function(c){return(fP==='todos'||c.p===fP)&&(fR==='todos'||c.r===fR);});if(!rw.length){tb.innerHTML='<tr><td colspan="6" class="nd">Sin datos</td></tr>';return;}tb.innerHTML=rw.map(function(c,i){var bd=c.d>90?'red':c.d>30?'amber':'green';var bm=c.pct>40?'red':c.pct>15?'amber':'green';return '<tr class="'+(c.d>90?'al':'')+'"><td class="mu">'+String(i+1).padStart(2,'0')+'</td><td class="bold">'+c.n+'</td><td>'+c.p.replace('Lactolac ','')+'</td><td class="r"><span class="badge '+bd+'">'+c.d+'</span></td><td class="r bold" style="color:var(--red)">'+fmt(c.v)+'</td><td class="r"><span class="badge '+bm+'">'+c.pct+'%</span></td></tr>';}).join('');}
+function bAlt(){var tb=document.getElementById('tb-alt');if(!tb)return;var rw=ALT.filter(function(c){return(fP==='todos'||c.p===fP)&&(fR==='todos'||c.r===fR);});if(!rw.length){tb.innerHTML='<tr><td colspan="4" class="nd">Sin alertas</td></tr>';return;}tb.innerHTML=rw.map(function(c){return '<tr class="al"><td class="bold">'+c.n+'</td><td>'+c.p.replace('Lactolac ','')+'</td><td class="r"><span class="badge red">'+c.d+'</span></td><td class="r bold" style="color:var(--red)">'+fmt(c.v)+'</td></tr>';}).join('');}
+function rCnt(){var q=(document.getElementById('si-cnt').value||'').toLowerCase();var rw=CNT.filter(function(r){return(fP==='todos'||r.p===fP)&&(fR==='todos'||r.r===fR)&&(!q||r.n.toLowerCase().indexOf(q)>=0);});document.getElementById('cnt-n').textContent=rw.length+' registros';var tb=document.getElementById('tb-cnt');if(!rw.length){tb.innerHTML='<tr><td colspan="7" class="nd">Sin registros</td></tr>';return;}tb.innerHTML=rw.map(function(r,i){var bd=r.d>90?'red':r.d>30?'amber':'green';return '<tr class="'+(r.d>30?'al':'')+'"><td class="mu">'+String(i+1).padStart(2,'0')+'</td><td class="bold">'+r.n+'</td><td>'+r.p.replace('Lactolac ','')+'</td><td>'+r.r+'</td><td class="r"><span class="badge '+bd+'">'+r.d+'</span></td><td class="r bold" style="color:var(--amber)">'+fmt(r.v)+'</td><td class="r">'+r.dc+'</td></tr>';}).join('');}
+function rBlq(){var q=(document.getElementById('si-blq').value||'').toLowerCase();var rw=BLOQ.filter(function(r){return(fP==='todos'||r.p===fP)&&(fR==='todos'||r.r===fR)&&(!q||r.n.toLowerCase().indexOf(q)>=0);});document.getElementById('blq-n').textContent=rw.length+' registros';var tb=document.getElementById('tb-blq');if(!rw.length){tb.innerHTML='<tr><td colspan="8" class="nd">Sin registros</td></tr>';return;}tb.innerHTML=rw.map(function(r){var c=r.d>90,a=r.d>30;var ac2=c?'<span class="badge red">Gesti\u00f3n urgente</span>':a?'<span class="badge amber">En seguimiento</span>':'<span class="badge blue">Monitorear</span>';return '<tr class="'+(c?'al':'')+'"><td class="bold">'+r.n+'</td><td>'+r.p+'</td><td>'+r.r+'</td><td>'+r.ru+'</td><td class="r"><span class="badge '+(c?'red':a?'amber':'green')+'">'+r.d+'</span></td><td class="r bold" style="color:var(--red)">'+fmt(r.v)+'</td><td class="r">'+r.dc+'</td><td>'+ac2+'</td></tr>';}).join('');}
+function sf(tipo,valor){document.querySelectorAll('.fb[data-f="'+tipo+'"]').forEach(function(b){b.classList.remove('active');});var btn=document.querySelector('.fb[data-f="'+tipo+'"][data-v="'+valor+'"]');if(btn)btn.classList.add('active');if(tipo==='plantel')fP=valor;if(tipo==='region')fR=valor;uKPI();uPL();bAnt();bReg();bTop();bAlt();rCnt();rBlq();}
+function nv(v){var x=parseFloat((v||'').toString().replace(/,/g,'').trim());return isNaN(x)?0:x;}
+
+function procesarCSV(rows){
+  var combos={};
+  function add(key,row){
+    if(!combos[key])combos[key]={cartera:0,vencido:0,noVencido:0,clientes:new Set(),bloqueados:new Set(),mora60:0,docs:0,d130:0,d3160:0,d6190:0,d91120:0,dmas120:0,contados:0,cCliSet:new Set()};
+    var c=combos[key];
+    c.cartera+=nv(row['MONTO']);c.vencido+=nv(row['MONTO VENCIDO']);c.noVencido+=nv(row['MONTO NO VENCIDO']);
+    c.d130+=Math.max(nv(row['DE 1-30']),0);c.d3160+=Math.max(nv(row['DE 31-60']),0);
+    c.d6190+=Math.max(nv(row['DE 61-90']),0);c.d91120+=Math.max(nv(row['DE 91-120']),0);
+    c.dmas120+=Math.max(nv(row['MAS DE 120']),0);
+    c.mora60+=Math.max(nv(row['DE 61-90']),0)+Math.max(nv(row['DE 91-120']),0)+Math.max(nv(row['MAS DE 120']),0);
+    c.docs++;
+    if(row['COD. CLIENTE'])c.clientes.add(row['COD. CLIENTE']);
+    if(row['BLOQ. PEDIDO']&&row['BLOQ. PEDIDO'].toString().trim()!=='')if(row['COD. CLIENTE'])c.bloqueados.add(row['COD. CLIENTE']);
+    if(nv(row['PLAZO'])===0&&nv(row['MONTO VENCIDO'])>0){c.contados+=nv(row['MONTO VENCIDO']);if(row['COD. CLIENTE'])c.cCliSet.add(row['COD. CLIENTE']);}
+  }
+  rows.forEach(function(row){
+    var p=(row['PLANTEL']||'').trim(),r=(row['REGION']||'').trim();
+    if(!p)return;
+    add('todos|todos',row);add(p+'|todos',row);add('todos|'+r,row);add(p+'|'+r,row);
+  });
+  KPI={};ANT={};
+  Object.keys(combos).forEach(function(key){
+    var c=combos[key];
+    var pct=c.cartera>0?Math.round(c.vencido/c.cartera*10000)/100:0;
+    KPI[key]={cartera:Math.round(c.cartera),vencido:Math.round(c.vencido),noVencido:Math.round(c.noVencido),pctMora:pct,clientes:c.clientes.size,bloqueados:c.bloqueados.size,mora60:Math.round(c.mora60),docs:c.docs,contados:Math.round(c.contados),cCli:c.cCliSet.size};
+    ANT[key]=[Math.round(c.d130),Math.round(c.d3160),Math.round(c.d6190),Math.round(c.d91120),Math.round(c.dmas120)];
+  });
+  // BLOQ
+  var bMap={};
+  rows.forEach(function(row){
+    if(!row['BLOQ. PEDIDO']||row['BLOQ. PEDIDO'].toString().trim()==='')return;
+    var cod=row['COD. CLIENTE']||row['Nombre 1'];
+    if(!bMap[cod])bMap[cod]={n:row['Nombre 1']||'',p:(row['PLANTEL']||'').trim(),r:(row['REGION']||'').trim(),ru:(row['RUTA']||'').trim(),d:0,v:0,dc:0};
+    bMap[cod].v+=nv(row['MONTO VENCIDO']);bMap[cod].d=Math.max(bMap[cod].d,nv(row['DIAS VENC']));bMap[cod].dc++;
+  });
+  BLOQ=Object.values(bMap).sort(function(a,b){return b.v-a.v;}).map(function(x){return {...x,v:Math.round(x.v),d:Math.round(x.d)};});
+  // TOP clientes
+  var cMap={};
+  rows.forEach(function(row){
+    var cod=row['COD. CLIENTE']||row['Nombre 1'];
+    if(!cMap[cod])cMap[cod]={n:row['Nombre 1']||'',p:(row['PLANTEL']||'').trim(),r:(row['REGION']||'').trim(),cartera:0,v:0,d:0};
+    cMap[cod].cartera+=nv(row['MONTO']);cMap[cod].v+=nv(row['MONTO VENCIDO']);cMap[cod].d=Math.max(cMap[cod].d,nv(row['DIAS VENC']));
+  });
+  TOP=Object.values(cMap).filter(function(c){return c.v>0;}).sort(function(a,b){return b.v-a.v;}).slice(0,10).map(function(c){return {n:c.n,p:c.p,r:c.r,v:Math.round(c.v),d:Math.round(c.d),pct:c.cartera>0?Math.round(c.v/c.cartera*100):0};});
+  // ALERTAS sin bloqueo >120 días
+  var bloqSet=new Set(BLOQ.map(function(b){return b.n;}));
+  ALT=Object.values(cMap).filter(function(c){return c.d>=120&&c.v>1000&&!bloqSet.has(c.n);}).sort(function(a,b){return b.d-a.d;}).slice(0,8).map(function(c){return {n:c.n,p:c.p,r:c.r,v:Math.round(c.v),d:Math.round(c.d)};});
+  // CONTADOS
+  var ctMap={};
+  rows.forEach(function(row){
+    if(nv(row['PLAZO'])!==0||nv(row['MONTO VENCIDO'])<=0)return;
+    var cod=row['COD. CLIENTE']||row['Nombre 1'];
+    if(!ctMap[cod])ctMap[cod]={n:row['Nombre 1']||'',p:(row['PLANTEL']||'').trim(),r:(row['REGION']||'').trim(),v:0,d:0,dc:0};
+    ctMap[cod].v+=nv(row['MONTO VENCIDO']);ctMap[cod].d=Math.max(ctMap[cod].d,nv(row['DIAS VENC']));ctMap[cod].dc++;
+  });
+  CNT=Object.values(ctMap).sort(function(a,b){return b.v-a.v;}).slice(0,20).map(function(c){return {...c,v:Math.round(c.v),d:Math.round(c.d)};});
+  // Actualizar fecha
+  var hoy=new Date();
+  document.getElementById('bd').textContent=hoy.toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'});
+}
+
+window.addEventListener('load',function(){
+  // Intentar cargar CSV en vivo
+  if(typeof Papa!=='undefined'){
+    Papa.parse(CSV_URL,{
+      download:true,header:true,dynamicTyping:false,skipEmptyLines:true,
+      complete:function(res){
+        try{
+          if(res.data&&res.data.length>10){procesarCSV(res.data);console.log('CSV cargado: '+res.data.length+' filas');}
+        }catch(e){console.warn('CSV error, usando datos estaticos:',e);}
+        iniciar();
+      },
+      error:function(){console.warn('CSV no disponible, usando datos estaticos.');iniciar();}
+    });
+  } else {
+    iniciar();
+  }
+});
+
+function iniciar(){uKPI();uPL();bAnt();bReg();bRut();bPlz();bPar();bTop();bAlt();rCnt();rBlq();requestAnimationFrame(function(){requestAnimationFrame(function(){document.querySelectorAll('.pcb').forEach(function(e){e.style.width=e.dataset.w+'%';});});});}
+</script>
+</body>
+</html>
