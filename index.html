@@ -659,7 +659,27 @@ function uAll(){
 
 var CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRx3_ZBrdMa5bmt91SDTy_jD2s3XqsNYcBsB6o4a-p1BXSI71zjqt5wZ_x_Wx76LqAoILDiAsR3k3sP/pub?gid=1850033612&single=true&output=csv';
 
-function nv(v){var x=parseFloat((v||'').toString().replace(/,/g,'').trim());return isNaN(x)?0:x;}
+function nv(v){
+  if(v===null||v===undefined||v==='')return 0;
+  var s=v.toString().trim();
+  // Remove currency symbols and spaces
+  s=s.replace(/[Q$€£\s]/g,'');
+  // Detect format: if has both . and , figure out which is decimal
+  var hasDot=s.indexOf('.')>=0;
+  var hasComma=s.indexOf(',')>=0;
+  if(hasDot&&hasComma){
+    // Last separator is decimal: "1,234.56" or "1.234,56"
+    if(s.lastIndexOf('.')>s.lastIndexOf(','))s=s.replace(/,/g,'');     // 1,234.56 -> 1234.56
+    else s=s.replace(/\./g,'').replace(',','.');                         // 1.234,56 -> 1234.56
+  } else if(hasComma&&!hasDot){
+    // Could be "1,234" (thousands) or "1,56" (decimal)
+    var parts=s.split(',');
+    if(parts.length===2&&parts[1].length<=2)s=s.replace(',','.');       // decimal comma
+    else s=s.replace(/,/g,'');                                           // thousands comma
+  }
+  var x=parseFloat(s);
+  return isNaN(x)?0:x;
+}
 
 function getCanal(ruta){
   if(!ruta)return 'Sin Canal';
@@ -678,6 +698,13 @@ function procesarCSV(rows){
   var REGIONES=['todos','METROPOLITANA','CENTRAL','SURORIENTE','SUROCCIDENTE','NORORIENTE','NOROCCIDENTE','NORTE','PETEN'];
 
   rows=rows.filter(function(r){return r['PLANTEL']&&r['PLANTEL'].toString().trim();});
+  // Diagnostic: log first row MONTO to verify parsing
+  if(rows.length>0){
+    var sampleRaw=rows[0]['MONTO'];
+    var sampleParsed=nv(rows[0]['MONTO']);
+    console.log('CSV sample MONTO raw:',sampleRaw,'parsed:',sampleParsed);
+    console.log('CSV total rows:',rows.length);
+  }
   rows.forEach(function(r){r._canal=getCanal(r['RUTA']);});
 
   function mkKPI(sub){
