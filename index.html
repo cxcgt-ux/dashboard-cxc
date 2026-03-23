@@ -697,7 +697,15 @@ function procesarCSV(rows){
   var PLANTELES=['todos','Lactolac Vasto','Lactolac Mixco','Lactolac Xela'];
   var REGIONES=['todos','METROPOLITANA','CENTRAL','SURORIENTE','SUROCCIDENTE','NORORIENTE','NOROCCIDENTE','NORTE','PETEN'];
 
-  rows=rows.filter(function(r){return r['PLANTEL']&&r['PLANTEL'].toString().trim();});
+  // Separar filas con y sin plantel
+  var rowsConPlantel=rows.filter(function(r){return r['PLANTEL']&&r['PLANTEL'].toString().trim();});
+  // Calcular ajuste de filas sin plantel (notas credito etc)
+  var ajusteCartera=0, ajusteVencido=0;
+  rows.filter(function(r){return !r['PLANTEL']||!r['PLANTEL'].toString().trim();}).forEach(function(r){
+    ajusteCartera+=nv(r['MONTO']);
+    ajusteVencido+=nv(r['MONTO VENCIDO']);
+  });
+  rows=rowsConPlantel;
   // Diagnostic: log first row MONTO to verify parsing
   if(rows.length>0){
     var sampleRaw=rows[0]['MONTO'];
@@ -864,7 +872,14 @@ function procesarCSV(rows){
   while(sel.options.length>1)sel.remove(1);
   initRutaSelector();
 
-  console.log('CSV cargado: '+rows.length+' filas');
+  // Aplicar ajuste de filas sin plantel al KPI global
+  if(newDATA['todos']&&newDATA['todos']['kpi_todos|todos']){
+    newDATA['todos']['kpi_todos|todos'].cartera=Math.round(newDATA['todos']['kpi_todos|todos'].cartera+ajusteCartera);
+    newDATA['todos']['kpi_todos|todos'].vencido=Math.max(Math.round(newDATA['todos']['kpi_todos|todos'].vencido+ajusteVencido),0);
+    var k=newDATA['todos']['kpi_todos|todos'];
+    k.pctMora=k.cartera>0?Math.round(k.vencido/k.cartera*10000)/100:0;
+  }
+  console.log('CSV cargado: '+rows.length+' filas, ajuste: Q'+Math.round(ajusteCartera));
 }
 
 window.addEventListener('load',function(){
