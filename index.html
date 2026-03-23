@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grupo Calder Guatemala</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--blue:#1F4E79;--blue2:#2E75B6;--blue3:#D6E4F0;--red:#C00000;--red2:#FFE5E5;--green:#1a7a4a;--green2:#E6F4EC;--amber:#B45309;--amber2:#FEF3C7;--gray:#F8FAFC;--gray2:#E2E8F0;--gray3:#94A3B8;--gray4:#475569;--gray5:#1E293B;--shadow:0 2px 12px rgba(0,0,0,.08);--radius:12px}
@@ -655,11 +656,212 @@ function sf(tipo,valor){
 function uAll(){
   uKPI();uPL();uCanal();bAnt();bReg();bRutas();bPlazo();bPareto();bTop();rAlt();rCnt();rBlq();
 }
+
+var CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRx3_ZBrdMa5bmt91SDTy_jD2s3XqsNYcBsB6o4a-p1BXSI71zjqt5wZ_x_Wx76LqAoILDiAsR3k3sP/pub?gid=280965409&single=true&output=csv';
+
+function nv(v){var x=parseFloat((v||'').toString().replace(/,/g,'').trim());return isNaN(x)?0:x;}
+
+function getCanal(ruta){
+  if(!ruta)return 'Sin Canal';
+  var r=String(ruta).toUpperCase();
+  if(r.indexOf('DG')===0)return 'Detalle';
+  if(r.indexOf('IG')===0)return 'Institucional';
+  if(r.indexOf('SG')===0)return 'Supermercado';
+  if(r.indexOf('SP')===0)return 'Degustaciones';
+  if(r.indexOf('ME')===0)return 'Municipalidad';
+  return 'Sin Canal';
+}
+
+function procesarCSV(rows){
+  var CANALES=['todos','Detalle','Institucional','Supermercado','Degustaciones','Municipalidad'];
+  var PLANTELES=['todos','Lactolac Vasto','Lactolac Mixco','Lactolac Xela'];
+  var REGIONES=['todos','METROPOLITANA','CENTRAL','SURORIENTE','SUROCCIDENTE','NORORIENTE','NOROCCIDENTE','NORTE','PETEN'];
+
+  rows=rows.filter(function(r){return r['PLANTEL']&&r['PLANTEL'].toString().trim();});
+  rows.forEach(function(r){r._canal=getCanal(r['RUTA']);});
+
+  function mkKPI(sub){
+    var cart=0,venc=0,nv2=0,m60=0,docs=0,d130=0,d3160=0,d6190=0,d91120=0,dmas=0,cont=0,cCli=new Set(),cli=new Set(),bloq=new Set();
+    sub.forEach(function(r){
+      cart+=nv(r['MONTO']);venc+=nv(r['MONTO VENCIDO']);nv2+=nv(r['MONTO NO VENCIDO']);
+      d130+=Math.max(nv(r['DE 1-30']),0);d3160+=Math.max(nv(r['DE 31-60']),0);
+      d6190+=Math.max(nv(r['DE 61-90']),0);d91120+=Math.max(nv(r['DE 91-120']),0);dmas+=Math.max(nv(r['MAS DE 120']),0);
+      m60+=Math.max(nv(r['DE 61-90']),0)+Math.max(nv(r['DE 91-120']),0)+Math.max(nv(r['MAS DE 120']),0);
+      docs++;if(r['COD. CLIENTE'])cli.add(r['COD. CLIENTE']);
+      if(r['BLOQ. PEDIDO']&&r['BLOQ. PEDIDO'].toString().trim()&&r['COD. CLIENTE'])bloq.add(r['COD. CLIENTE']);
+      if(nv(r['PLAZO'])===0&&nv(r['DIAS VENC'])>=1){cont+=nv(r['MONTO VENCIDO']);if(r['COD. CLIENTE'])cCli.add(r['COD. CLIENTE']);}
+    });
+    var pct=cart!==0?Math.round(venc/cart*10000)/100:0;
+    return {cartera:Math.round(cart),vencido:Math.round(Math.max(venc,0)),noVencido:Math.round(nv2),
+      pctMora:Math.max(pct,0),clientes:cli.size,bloqueados:bloq.size,mora60:Math.round(m60),docs:docs,
+      contados:Math.round(Math.max(cont,0)),cCli:cCli.size,
+      ant:[Math.round(d130),Math.round(d3160),Math.round(d6190),Math.round(d91120),Math.round(dmas)]};
+  }
+
+  function getSub(base,fp,fr,fc){
+    return base.filter(function(r){
+      return (fp==='todos'||r['PLANTEL']===fp)&&(fr==='todos'||r['REGION']===fr)&&(fc==='todos'||r._canal===fc);
+    });
+  }
+
+  function mkTopCli(sub){
+    var cmap={};
+    sub.forEach(function(r){
+      var cod=r['COD. CLIENTE']||r['Nombre 1'];
+      if(!cmap[cod])cmap[cod]={n:String(r['Nombre 1']),p:String(r['PLANTEL']).trim(),r2:String(r['REGION']).trim(),c:r._canal,cartera:0,v:0,d:0};
+      cmap[cod].cartera+=nv(r['MONTO']);cmap[cod].v+=nv(r['MONTO VENCIDO']);cmap[cod].d=Math.max(cmap[cod].d,nv(r['DIAS VENC']));
+    });
+    return Object.values(cmap).filter(function(v){return v.v>0;}).sort(function(a,b){return b.v-a.v;}).slice(0,20).map(function(v){
+      return {n:v.n,p:v.p,r:v.r2,c:v.c,v:Math.round(Math.max(v.v,0)),d:Math.round(v.d),pct:v.cartera>0?Math.round(v.v/v.cartera*100):0};
+    });
+  }
+
+  function mkAlt(sub){
+    var bloqSet=new Set(sub.filter(function(r){return r['BLOQ. PEDIDO']&&r['BLOQ. PEDIDO'].toString().trim();}).map(function(r){return r['COD. CLIENTE'];}));
+    var cmap={};
+    sub.forEach(function(r){if(nv(r['MONTO VENCIDO'])<=0)return;var cod=r['COD. CLIENTE'];if(!cmap[cod])cmap[cod]={n:String(r['Nombre 1']),p:String(r['PLANTEL']).trim(),r2:String(r['REGION']).trim(),c:r._canal,v:0,d:0};cmap[cod].v+=nv(r['MONTO VENCIDO']);cmap[cod].d=Math.max(cmap[cod].d,nv(r['DIAS VENC']));});
+    return Object.entries(cmap).filter(function(e){return !bloqSet.has(e[0])&&e[1].v>0;}).map(function(e){return {n:e[1].n,p:e[1].p,r:e[1].r2,c:e[1].c,v:Math.round(Math.max(e[1].v,0)),d:Math.round(e[1].d)};}).sort(function(a,b){return b.d-a.d;}).slice(0,50);
+  }
+
+  function mkCnt(sub){
+    var sub2=sub.filter(function(r){return nv(r['PLAZO'])===0&&nv(r['DIAS VENC'])>=1;});
+    var cmap={};
+    sub2.forEach(function(r){var cod=r['COD. CLIENTE'];if(!cmap[cod])cmap[cod]={n:String(r['Nombre 1']),p:String(r['PLANTEL']).trim(),r2:String(r['REGION']).trim(),c:r._canal,v:0,d:0,dc:0};cmap[cod].v+=nv(r['MONTO VENCIDO']);cmap[cod].d=Math.max(cmap[cod].d,nv(r['DIAS VENC']));cmap[cod].dc++;});
+    return Object.values(cmap).filter(function(v){return v.v>0;}).sort(function(a,b){return b.v-a.v;}).map(function(v){return {n:v.n,p:v.p,r:v.r2,c:v.c,v:Math.round(Math.max(v.v,0)),d:Math.round(v.d),dc:v.dc};});
+  }
+
+  function mkBloq(sub){
+    var sub2=sub.filter(function(r){return r['BLOQ. PEDIDO']&&r['BLOQ. PEDIDO'].toString().trim();});
+    var cmap={};
+    sub2.forEach(function(r){var cod=r['COD. CLIENTE'];if(!cmap[cod])cmap[cod]={n:String(r['Nombre 1']),p:String(r['PLANTEL']).trim(),r2:String(r['REGION']).trim(),ru:String(r['RUTA']).trim(),c:r._canal,v:0,d:0,dc:0};cmap[cod].v+=nv(r['MONTO VENCIDO']);cmap[cod].d=Math.max(cmap[cod].d,nv(r['DIAS VENC']));cmap[cod].dc++;});
+    return Object.values(cmap).sort(function(a,b){return b.v-a.v;}).map(function(v){return {n:v.n,p:v.p,r:v.r2,ru:v.ru,c:v.c,v:Math.round(Math.max(v.v,0)),d:Math.round(v.d),dc:v.dc};});
+  }
+
+  function mkPareto(sub){
+    var g={};
+    sub.forEach(function(r){var ruta=r['RUTA']||'';if(!g[ruta])g[ruta]=0;g[ruta]+=nv(r['MONTO VENCIDO']);});
+    var arr=Object.entries(g).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+    var total=arr.reduce(function(s,e){return s+e[1];},0);var cum=0;
+    return arr.map(function(e){cum+=e[1];return {r:e[0],v:Math.round(e[1]),a:total>0?Math.round(cum/total*1000)/10:0};});
+  }
+
+  function mkRutas(sub){
+    var g={};
+    sub.forEach(function(r){var ruta=r['RUTA']||'';if(!g[ruta])g[ruta]={v:0,nv2:0};g[ruta].v+=nv(r['MONTO VENCIDO']);g[ruta].nv2+=nv(r['MONTO NO VENCIDO']);});
+    var arr=Object.entries(g).filter(function(e){return e[1].v>0;}).sort(function(a,b){return b[1].v-a[1].v;}).slice(0,10);
+    return {labels:arr.map(function(e){return e[0];}),v:arr.map(function(e){return Math.round(e[1].v);}),nv:arr.map(function(e){return Math.max(Math.round(e[1].nv2),0);})};
+  }
+
+  function mkPlazo(sub){
+    var g={};
+    sub.forEach(function(r){if(nv(r['MONTO VENCIDO'])<=0)return;var p=nv(r['PLAZO']);if(!g[p])g[p]=0;g[p]+=nv(r['MONTO VENCIDO']);});
+    var arr=Object.entries(g).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+    return {labels:arr.map(function(e){return e[0]+'d';}),v:arr.map(function(e){return Math.round(e[1]);})};
+  }
+
+  function mkReg(sub){
+    var regs=['METROPOLITANA','SURORIENTE','CENTRAL','SUROCCIDENTE','NORORIENTE','NOROCCIDENTE','NORTE','PETEN'];
+    return regs.map(function(r){return Math.max(Math.round(sub.filter(function(x){return x['REGION']===r;}).reduce(function(s,x){return s+nv(x['MONTO VENCIDO']);},0)),0);});
+  }
+
+  // Build DATA
+  var newDATA={};
+  CANALES.forEach(function(canal){
+    var base=canal==='todos'?rows:rows.filter(function(r){return r._canal===canal;});
+    var d={};
+    PLANTELES.forEach(function(fp){
+      REGIONES.forEach(function(fr){
+        var sub=getSub(base,fp,fr,'todos');
+        if(!sub.length)return;
+        var key='kpi_'+fp+'|'+fr;
+        var k=mkKPI(sub);
+        d[key]=k;
+        d['ant_'+fp+'|'+fr]=k.ant;
+      });
+      var sfp=getSub(base,fp,'todos','todos');
+      if(!sfp.length)return;
+      d['reg_'+fp]=mkReg(sfp);
+      d['rutas_'+fp]=mkRutas(sfp);
+      d['pareto_'+fp]=mkPareto(sfp);
+      d['plazo_'+fp]=mkPlazo(sfp);
+      d['top_'+fp+'|todos']=mkTopCli(sfp);
+      d['alt_'+fp]=mkAlt(sfp);
+      d['cnt_'+fp]=mkCnt(sfp);
+      d['bloq_'+fp]=mkBloq(sfp);
+      REGIONES.slice(1).forEach(function(fr){
+        var sub2=getSub(base,fp,fr,'todos');
+        if(sub2.length)d['top_'+fp+'|'+fr]=mkTopCli(sub2);
+      });
+    });
+    d['top_todos|todos']=mkTopCli(base);
+    REGIONES.slice(1).forEach(function(fr){
+      var sub2=base.filter(function(r){return r['REGION']===fr;});
+      if(sub2.length)d['top_todos|'+fr]=mkTopCli(sub2);
+    });
+    newDATA[canal]=d;
+  });
+
+  // Build RUTA_DATA
+  var rutaMap={};
+  rows.forEach(function(r){var ruta=r['RUTA']||'';if(!rutaMap[ruta])rutaMap[ruta]=[];rutaMap[ruta].push(r);});
+  var newRUTA={};
+  Object.keys(rutaMap).forEach(function(ruta){
+    var sub=rutaMap[ruta];
+    var k=mkKPI(sub);
+    var cmap2={};
+    sub.forEach(function(r){var cod=r['COD. CLIENTE'];if(!cmap2[cod])cmap2[cod]={n:String(r['Nombre 1']),v:0};cmap2[cod].v+=nv(r['MONTO VENCIDO']);});
+    var p80=Object.values(cmap2).filter(function(v){return v.v>0;}).sort(function(a,b){return b.v-a.v;});
+    var tot=p80.reduce(function(s,v){return s+v.v;},0);var cum=0;
+    p80=p80.slice(0,15).map(function(v){cum+=v.v;return {n:v.n,v:Math.round(Math.max(v.v,0)),a:tot>0?Math.round(cum/tot*1000)/10:0};});
+    newRUTA[ruta]={
+      canal:sub[0]._canal,plantel:String(sub[0]['PLANTEL']).trim(),region:String(sub[0]['REGION']).trim(),
+      kpi:k,ant:k.ant,plazo:mkPlazo(sub),
+      clientes:mkTopCli(sub),pareto80:p80,
+      alt:mkAlt(sub),cnt:mkCnt(sub),bloq:mkBloq(sub)
+    };
+  });
+
+  // Build ROUTE_LIST
+  var newRL=Object.keys(newRUTA).map(function(ruta){
+    var rd=newRUTA[ruta];var k=rd.kpi||{};
+    return {id:ruta,canal:rd.canal,plantel:rd.plantel.replace('Lactolac ',''),region:rd.region,vencido:k.vencido||0,pctMora:k.pctMora||0,clientes:k.clientes||0};
+  }).sort(function(a,b){return b.vencido-a.vencido;});
+
+  // Replace global data
+  DATA=newDATA;
+  RUTA_DATA=newRUTA;
+  ROUTE_LIST=newRL;
+
+  // Refresh route selector
+  var sel=document.getElementById('ruta-sel');
+  while(sel.options.length>1)sel.remove(1);
+  initRutaSelector();
+
+  console.log('CSV cargado: '+rows.length+' filas');
+}
+
 window.addEventListener('load',function(){
   var hoy=new Date().toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'});
   document.getElementById('bd').textContent=hoy;
   initRutaSelector();
   uAll();
+  // Cargar CSV en vivo
+  if(typeof Papa!=='undefined'){
+    Papa.parse(CSV_URL,{
+      download:true,header:true,dynamicTyping:false,skipEmptyLines:true,
+      complete:function(res){
+        if(res.data&&res.data.length>10){
+          try{
+            procesarCSV(res.data);
+            document.getElementById('bd').textContent=new Date().toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'});
+            uAll();
+            console.log('Datos actualizados desde Google Sheets');
+          }catch(e){console.warn('Error procesando CSV:',e);}
+        }
+      },
+      error:function(e){console.warn('No se pudo cargar CSV, usando datos estaticos');}
+    });
+  }
   var ftf=document.getElementById('ft-fecha');if(ftf)ftf.textContent=new Date().toLocaleDateString('es-GT',{day:'numeric',month:'long',year:'numeric'});
 });
 </script>
