@@ -425,6 +425,9 @@ function uCanal(){
     var s=DATA[cn]||{};
     var k=s['kpi_'+fP+'|'+(fR==='todos'?'todos':fR)]||s['kpi_'+fP+'|todos']||s['kpi_todos|todos']||{};
     if(fP!=='todos'&&!s['kpi_'+fP+'|todos'])k={};
+    // Hide canal card if no data at all
+    var globalK=s['kpi_todos|todos']||{};
+    if(!globalK.docs||globalK.docs===0)return;
     var col=CCOLS[cn]||'#1F4E79';
     var isAct=(fC===cn);
     var div=document.createElement('div');
@@ -700,10 +703,11 @@ function procesarCSV(rows){
   // Separar filas con y sin plantel
   var rowsConPlantel=rows.filter(function(r){return r['PLANTEL']&&r['PLANTEL'].toString().trim();});
   // Calcular ajuste de filas sin plantel (notas credito etc)
-  var ajusteCartera=0, ajusteVencido=0;
+  var ajusteCartera=0, ajusteVencido=0, ajusteDocs=0;
   rows.filter(function(r){return !r['PLANTEL']||!r['PLANTEL'].toString().trim();}).forEach(function(r){
     ajusteCartera+=nv(r['MONTO']);
     ajusteVencido+=nv(r['MONTO VENCIDO']);
+    ajusteDocs++;
   });
   rows=rowsConPlantel;
   // Diagnostic: log first row MONTO to verify parsing
@@ -874,12 +878,24 @@ function procesarCSV(rows){
 
   // Aplicar ajuste de filas sin plantel al KPI global
   if(newDATA['todos']&&newDATA['todos']['kpi_todos|todos']){
-    newDATA['todos']['kpi_todos|todos'].cartera=Math.round(newDATA['todos']['kpi_todos|todos'].cartera+ajusteCartera);
-    newDATA['todos']['kpi_todos|todos'].vencido=Math.max(Math.round(newDATA['todos']['kpi_todos|todos'].vencido+ajusteVencido),0);
-    var k=newDATA['todos']['kpi_todos|todos'];
-    k.pctMora=k.cartera>0?Math.round(k.vencido/k.cartera*10000)/100:0;
+    var kg=newDATA['todos']['kpi_todos|todos'];
+    kg.cartera=Math.round(kg.cartera+ajusteCartera);
+    kg.vencido=Math.max(Math.round(kg.vencido+ajusteVencido),0);
+    kg.pctMora=kg.cartera>0?Math.round(kg.vencido/kg.cartera*10000)/100:0;
+    kg.docs=kg.docs+ajusteDocs; // include all rows in doc count
   }
-  console.log('CSV cargado: '+rows.length+' filas, ajuste: Q'+Math.round(ajusteCartera));
+  // Diagnostic totals
+  var totalCartera=0,totalVencido=0,totalDocs=rows.length+ajusteDocs;
+  if(newDATA['todos']&&newDATA['todos']['kpi_todos|todos']){
+    var kg2=newDATA['todos']['kpi_todos|todos'];
+    totalCartera=kg2.cartera; totalVencido=kg2.vencido;
+  }
+  console.log('=== RESUMEN CSV ===');
+  console.log('Total filas: '+(rows.length+ajusteDocs)+' ('+rows.length+' con plantel + '+ajusteDocs+' sin plantel)');
+  console.log('Cartera total: Q '+totalCartera.toLocaleString());
+  console.log('Vencido total: Q '+totalVencido.toLocaleString());
+  console.log('% Mora: '+(totalCartera>0?(totalVencido/totalCartera*100).toFixed(2):'0')+'%');
+  console.log('==================');
 }
 
 window.addEventListener('load',function(){
