@@ -535,6 +535,8 @@ function rBlq(){
 // ═══════════════════════════════════════════
 function initRutaSelector(){
   var sel=document.getElementById('ruta-sel');
+  // Clear existing options except first
+  while(sel.options.length>1)sel.remove(1);
   var canales={'Detalle':'DET','Institucional':'INST','Supermercado':'SUP','Degustaciones':'DEGU','Municipalidad':'MUN'};
   // Group by canal
   var groups={};
@@ -872,8 +874,6 @@ function procesarCSV(rows){
   ROUTE_LIST=newRL;
 
   // Refresh route selector
-  var sel=document.getElementById('ruta-sel');
-  while(sel.options.length>1)sel.remove(1);
   initRutaSelector();
 
   // Aplicar ajuste de filas sin plantel al KPI global
