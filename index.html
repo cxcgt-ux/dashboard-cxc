@@ -164,7 +164,7 @@ tr.al{background:#FFF5F5}tr.al td{color:var(--red)}
     <div class="kpi cgr">
       <div class="kl">KPI Mora</div>
       <div class="kv red" id="k2pp">-</div>
-      <div class="ks" style="color:var(--gray3);margin-top:2px">vs meta 5.00%</div>
+      <div class="ks" style="color:var(--gray3);margin-top:2px">vs meta 3.00%</div>
     </div>
     <div class="kpi cg"><div class="kl">No Vencido</div><div class="kv green" id="k3">-</div><div class="ks" id="k3s">-</div></div>
     <div class="kpi cb"><div class="kl">Clientes</div><div class="kv blue" id="k4">-</div><div class="ks">activos en cartera</div></div>
@@ -174,23 +174,23 @@ tr.al{background:#FFF5F5}tr.al td{color:var(--red)}
   </div>
 
   <!-- Plantel -->
-  <div class="stitle">Mora por plantel vs meta 5%</div>
+  <div class="stitle">Mora por plantel vs meta 3%</div>
   <div class="pr3">
     <div class="pc danger">
       <div class="pcn">Lactolac Vasto</div><div class="pcp danger" id="pv0">-</div>
-      <div class="pcm">Meta 5% &middot; <span id="pv0d" style="font-weight:700">-</span></div>
+      <div class="pcm">Meta 3% &middot; <span id="pv0d" style="font-weight:700">-</span></div>
       <div class="pcbw"><div class="pcb" id="pv0b" style="background:var(--red)"></div></div>
       <div class="pcs"><div><div class="pcsv" id="pv0v">-</div><div class="pcsl">Vencido</div></div><div><div class="pcsv" id="pv0c">-</div><div class="pcsl">Cartera</div></div><div><div class="pcsv" id="pv0n">-</div><div class="pcsl">Clientes</div></div></div>
     </div>
     <div class="pc warn">
       <div class="pcn">Lactolac Mixco</div><div class="pcp warn" id="pm0">-</div>
-      <div class="pcm">Meta 5% &middot; <span id="pm0d" style="font-weight:700">-</span></div>
+      <div class="pcm">Meta 3% &middot; <span id="pm0d" style="font-weight:700">-</span></div>
       <div class="pcbw"><div class="pcb" id="pm0b" style="background:var(--amber)"></div></div>
       <div class="pcs"><div><div class="pcsv" id="pm0v">-</div><div class="pcsl">Vencido</div></div><div><div class="pcsv" id="pm0c">-</div><div class="pcsl">Cartera</div></div><div><div class="pcsv" id="pm0n">-</div><div class="pcsl">Clientes</div></div></div>
     </div>
     <div class="pc danger">
       <div class="pcn">Lactolac Xela</div><div class="pcp danger" id="px0">-</div>
-      <div class="pcm">Meta 5% &middot; <span id="px0d" style="font-weight:700">-</span></div>
+      <div class="pcm">Meta 3% &middot; <span id="px0d" style="font-weight:700">-</span></div>
       <div class="pcbw"><div class="pcb" id="px0b" style="background:var(--red)"></div></div>
       <div class="pcs"><div><div class="pcsv" id="px0v">-</div><div class="pcsl">Vencido</div></div><div><div class="pcsv" id="px0c">-</div><div class="pcsl">Cartera</div></div><div><div class="pcsv" id="px0n">-</div><div class="pcsl">Clientes</div></div></div>
     </div>
@@ -378,7 +378,7 @@ function uKPI(){
   // k2pp shows pp over meta as main value
   (function(){
     var el=document.getElementById('k2pp');if(!el)return;
-    var diff=(k.pctMora||0)-5;
+    var diff=(k.pctMora||0)-3;
     var s=performance.now(),pv=el._t2||0;el._t2=diff;
     (function tk(n){if(el._t2!==diff)return;var p=Math.min((n-s)/900,1),e2=1-Math.pow(1-p,3);
     var cur=pv+(diff-pv)*e2;el.textContent=cur.toFixed(2)+'%';
@@ -390,7 +390,7 @@ function uKPI(){
   ac(document.getElementById('k6'),k.mora60||0);
   ac(document.getElementById('k7'),k.contados||0);
   document.getElementById('k0s').textContent=(k.docs||0).toLocaleString()+' documentos';
-  var diff=((k.pctMora||0)-5);
+  var diff=((k.pctMora||0)-3);
   // k2s removed
   document.getElementById('k3s').textContent=(100-(k.pctMora||0)).toFixed(2)+'% de la cartera';
   document.getElementById('k7s').textContent=(k.cCli||0)+' clientes';
@@ -573,7 +573,7 @@ function selRuta(rutaId){
   document.getElementById('ruta-plz-label').textContent=rutaId;
   // KPIs
   var k=rd.kpi||{};
-  var diff=(k.pctMora||0)-5;
+  var diff=(k.pctMora||0)-3;
   document.getElementById('ruta-kpis').innerHTML=[
     {l:'Cartera',v:fS(k.cartera||0),cl:''},
     {l:'Vencido',v:fS(k.vencido||0),cl:'red'},
