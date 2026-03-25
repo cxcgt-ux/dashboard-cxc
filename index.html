@@ -712,12 +712,24 @@ function procesarCSV(rows){
     ajusteDocs++;
   });
   rows=rowsConPlantel;
-  // Diagnostic: log first row MONTO to verify parsing
+  // Diagnostic: verify parsing accuracy
   if(rows.length>0){
-    var sampleRaw=rows[0]['MONTO'];
-    var sampleParsed=nv(rows[0]['MONTO']);
-    console.log('CSV sample MONTO raw:',sampleRaw,'parsed:',sampleParsed);
-    console.log('CSV total rows:',rows.length);
+    console.log('CSV sample MONTO raw:',rows[0]['MONTO'],'parsed:',nv(rows[0]['MONTO']));
+    // Check for values that might parse incorrectly
+    var sumCheck=0, badRows=0;
+    rows.forEach(function(r){
+      var raw=r['MONTO']||'';
+      var parsed=nv(raw);
+      sumCheck+=parsed;
+      // Flag suspicious: raw has dot but parsed value is very small (< 10) when original looks large
+      var s=raw.toString().replace(/[Q\s]/g,'');
+      if(s.indexOf('.')>=0&&s.indexOf(',')<0&&parseFloat(s)<10&&s.length>4){
+        badRows++;
+        console.warn('POSIBLE ERROR PARSING MONTO: raw='+raw+' parsed='+parsed);
+      }
+    });
+    console.log('CSV total rows:',rows.length,'sum check: Q'+Math.round(sumCheck).toLocaleString());
+    if(badRows>0)console.warn(badRows+' filas con posible error de parsing');
   }
   rows.forEach(function(r){r._canal=getCanal(r['RUTA']);});
 
