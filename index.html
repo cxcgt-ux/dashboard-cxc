@@ -705,10 +705,11 @@ function procesarCSV(rows){
   // Separar filas con y sin plantel
   var rowsConPlantel=rows.filter(function(r){return r['PLANTEL']&&r['PLANTEL'].toString().trim();});
   // Calcular ajuste de filas sin plantel (notas credito etc)
-  var ajusteCartera=0, ajusteVencido=0, ajusteDocs=0;
+  var ajusteCartera=0, ajusteVencido=0, ajusteNoVencido=0, ajusteDocs=0;
   rows.filter(function(r){return !r['PLANTEL']||!r['PLANTEL'].toString().trim();}).forEach(function(r){
     ajusteCartera+=nv(r['MONTO']);
     ajusteVencido+=nv(r['MONTO VENCIDO']);
+    ajusteNoVencido+=nv(r['MONTO NO VENCIDO']);
     ajusteDocs++;
   });
   rows=rowsConPlantel;
@@ -721,15 +722,11 @@ function procesarCSV(rows){
       var raw=r['MONTO']||'';
       var parsed=nv(raw);
       sumCheck+=parsed;
-      // Flag suspicious: raw has dot but parsed value is very small (< 10) when original looks large
-      var s=raw.toString().replace(/[Q\s]/g,'');
-      if(s.indexOf('.')>=0&&s.indexOf(',')<0&&parseFloat(s)<10&&s.length>4){
-        badRows++;
-        console.warn('POSIBLE ERROR PARSING MONTO: raw='+raw+' parsed='+parsed);
-      }
+      // (no additional checks needed)
     });
-    console.log('CSV total rows:',rows.length,'sum check: Q'+Math.round(sumCheck).toLocaleString());
-    if(badRows>0)console.warn(badRows+' filas con posible error de parsing');
+    var totalConAjuste=sumCheck+ajusteCartera;
+    console.log('CSV total rows:',rows.length+ajusteDocs,'('+rows.length+' con plantel + '+ajusteDocs+' sin plantel)');
+    console.log('CSV sum con plantel: Q'+Math.round(sumCheck).toLocaleString()+' + ajuste sin plantel: Q'+Math.round(ajusteCartera).toLocaleString()+' = Q'+Math.round(totalConAjuste).toLocaleString());
   }
   rows.forEach(function(r){r._canal=getCanal(r['RUTA']);});
 
@@ -888,13 +885,17 @@ function procesarCSV(rows){
   // Refresh route selector
   initRutaSelector();
 
-  // Aplicar ajuste de filas sin plantel al KPI global
+  // Aplicar ajuste de filas sin plantel al KPI global (sin redondear antes)
   if(newDATA['todos']&&newDATA['todos']['kpi_todos|todos']){
     var kg=newDATA['todos']['kpi_todos|todos'];
-    kg.cartera=Math.round(kg.cartera+ajusteCartera);
-    kg.vencido=Math.max(Math.round(kg.vencido+ajusteVencido),0);
-    kg.pctMora=kg.cartera>0?Math.round(kg.vencido/kg.cartera*10000)/100:0;
-    kg.docs=kg.docs+ajusteDocs; // include all rows in doc count
+    // Revert the Math.round applied in mkKPI and apply adjustment first, then round
+    var rawCartera=kg.cartera+ajusteCartera;
+    var rawVencido=Math.max(kg.vencido+ajusteVencido,0);
+    kg.cartera=Math.round(rawCartera);
+    kg.vencido=Math.round(rawVencido);
+    kg.noVencido=Math.round(kg.noVencido+ajusteNoVencido);
+    kg.pctMora=rawCartera>0?Math.round(rawVencido/rawCartera*10000)/100:0;
+    kg.docs=kg.docs+ajusteDocs;
   }
   // Diagnostic totals
   var totalCartera=0,totalVencido=0,totalDocs=rows.length+ajusteDocs;
