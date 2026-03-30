@@ -330,23 +330,23 @@ var PCOLS=['#C00000','#E53935','#E59400','#E59400','#2E75B6','#2E75B6','#4A90D9'
 function fmt(v){return 'Q '+Math.round(Math.max(v||0,0)).toLocaleString('en-US');}
 function fS(v){v=Math.max(v||0,0);return v>=1e6?'Q '+(v/1e6).toFixed(1)+'M':v>=1000?'Q '+(v/1000).toFixed(0)+'K':'Q '+Math.round(v);}
 
-function src(){return fC==='todos'?DATA['todos']:(DATA[fC]||DATA['todos']);}
+function src(){return DATA['Supermercado']||DATA['todos'];}
 function gk(){
-  var s=src();
+  var s=DATA['Supermercado']||{};
   if(fP==='todos'&&fR==='todos') return s['kpi_todos|todos']||{};
   if(fP==='todos') return s['kpi_todos|'+fR]||s['kpi_todos|todos']||{};
   if(fR==='todos') return s['kpi_'+fP+'|todos']||{};
   return s['kpi_'+fP+'|'+fR]||s['kpi_'+fP+'|todos']||{};
 }
-function ga(){var s=src();return (s['ant_'+fP+'|'+fR]||s['ant_'+fP+'|todos']||s['ant_todos|'+fR]||s['ant_todos|todos']||[0,0,0,0,0]).map(function(v){return Math.max(v,0);});}
-function greg(){var s=src();return s['reg_'+fP]||s['reg_todos']||[0,0,0,0,0,0,0,0];}
-function grutas(){var s=src();return s['rutas_'+fP]||s['rutas_todos']||{labels:[],v:[],nv:[]};}
-function gpareto(){var s=src();return s['pareto_'+fP]||s['pareto_todos']||[];}
-function gplazo(){var s=src();return s['plazo_'+fP]||s['plazo_todos']||{labels:[],v:[]};}
-function gtop(){var s=src();return s['top_'+fP+'|'+fR]||s['top_'+fP+'|todos']||s['top_todos|'+fR]||s['top_todos|todos']||[];}
-function galt(){var s=DATA['todos'];return (s['alt_'+fP]||s['alt_todos']||[]).filter(function(r){return (fR==='todos'||r.r===fR)&&(fC==='todos'||r.c===fC);});}
-function gcnt(){var s=DATA['todos'];return (s['cnt_'+fP]||s['cnt_todos']||[]).filter(function(r){return (fR==='todos'||r.r===fR)&&(fC==='todos'||r.c===fC);});}
-function gbloq(){var s=DATA['todos'];return (s['bloq_'+fP]||s['bloq_todos']||[]).filter(function(r){return (fR==='todos'||r.r===fR)&&(fC==='todos'||r.c===fC);});}
+function ga(){var s=DATA['Supermercado']||{};return (s['ant_'+fP+'|'+fR]||s['ant_'+fP+'|todos']||s['ant_todos|'+fR]||s['ant_todos|todos']||[0,0,0,0,0]).map(function(v){return Math.max(v,0);});}
+function greg(){var s=DATA['Supermercado']||{};return s['reg_'+fP]||s['reg_todos']||[0,0,0,0,0,0,0,0];}
+function grutas(){var s=DATA['Supermercado']||{};return s['rutas_'+fP]||s['rutas_todos']||{labels:[],v:[],nv:[]};}
+function gpareto(){var s=DATA['Supermercado']||{};return s['pareto_'+fP]||s['pareto_todos']||[];}
+function gplazo(){var s=DATA['Supermercado']||{};return s['plazo_'+fP]||s['plazo_todos']||{labels:[],v:[]};}
+function gtop(){var s=DATA['Supermercado']||{};return s['top_'+fP+'|'+fR]||s['top_'+fP+'|todos']||s['top_todos|'+fR]||s['top_todos|todos']||[];}
+function galt(){var s=DATA['Supermercado']||{};return (s['alt_'+fP]||s['alt_todos']||[]).filter(function(r){return (fR==='todos'||r.r===fR);});}
+function gcnt(){var s=DATA['Supermercado']||{};return (s['cnt_'+fP]||s['cnt_todos']||[]).filter(function(r){return (fR==='todos'||r.r===fR);});}
+function gbloq(){var s=DATA['Supermercado']||{};return (s['bloq_'+fP]||s['bloq_todos']||[]).filter(function(r){return (fR==='todos'||r.r===fR);});}
 
 function ac(el,t,isQ,dur){
   if(!el)return;isQ=isQ!==false;dur=dur||900;
@@ -394,7 +394,7 @@ function uPL(){
   ];
   cfg.forEach(function(c){
     var hidden=(fP!=='todos'&&fP!==c.p);
-    var s=src();
+    var s=DATA['Supermercado']||{};
     var k=hidden?{}:(s['kpi_'+c.p+'|'+(fR==='todos'?'todos':fR)]||s['kpi_'+c.p+'|todos']||{});
     var pct=k.pctMora||0, diff=pct-5;
     var col=pct>20?'var(--red)':pct>10?'var(--amber)':'var(--green)';
